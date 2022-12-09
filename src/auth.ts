@@ -1,7 +1,9 @@
 import { randomUUID } from 'node:crypto';
 import type { NextFunction, Request, RequestHandler, Response } from 'express';
-import { createRemoteJWKSet, jwtVerify, type JWTPayload } from 'jose';
+import { importJWK, jwtVerify, type JWK, type JWTPayload, type JWTVerifyGetKey } from 'jose';
 import { runWithTraceId } from './logger';
+
+const JWKS_CACHE_TTL_MS = 5 * 60 * 1000;
 
 export interface AuthUser {
   sub: string;
@@ -49,10 +51,33 @@ function unauthorizedBody(message: string) {
  * and reject with 401 when there's no valid token.
  */
 export function createJwtAuth(opts: CreateJwtAuthOpts) {
-  const jwks = createRemoteJWKSet(new URL(`${opts.issuer}/protocol/openid-connect/certs`));
+  const jwksUrl = `${opts.issuer}/protocol/openid-connect/certs`;
+  let cachedKeys: JWK[] | undefined;
+  let cachedAt = 0;
+
+  async function getJwks(): Promise<JWK[]> {
+    if (cachedKeys && Date.now() - cachedAt < JWKS_CACHE_TTL_MS) {
+      return cachedKeys;
+    }
+    const res = await fetch(jwksUrl);
+    if (!res.ok) {
+      throw new Error(`failed to fetch JWKS from ${jwksUrl}: ${res.status}`);
+    }
+    const body = (await res.json()) as { keys: JWK[] };
+    cachedKeys = body.keys;
+    cachedAt = Date.now();
+    return cachedKeys;
+  }
+
+  const getKey: JWTVerifyGetKey = async (header) => {
+    const keys = await getJwks();
+    const match = keys.find((k) => !header.kid || k.kid === header.kid) ?? keys[0];
+    if (!match) throw new Error(`no matching JWK for kid ${header.kid ?? '(none)'}`);
+    return importJWK(match, header.alg);
+  };
 
   async function verify(token: string): Promise<AuthUser> {
-    const { payload } = await jwtVerify(token, jwks, {
+    const { payload } = await jwtVerify(token, getKey, {
       issuer: opts.issuer,
       audience: opts.audience,
     });
