@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import type { NextFunction, Request, RequestHandler, Response } from 'express';
+import type { FastifyPluginAsync, FastifyReply, FastifyRequest } from 'fastify';
 import { importJWK, jwtVerify, type JWK, type JWTPayload, type JWTVerifyGetKey } from 'jose';
 import { runWithTraceId } from './logger';
 
@@ -17,6 +18,12 @@ declare global {
     interface Request {
       user?: AuthUser;
     }
+  }
+}
+
+declare module 'fastify' {
+  interface FastifyRequest {
+    user?: AuthUser;
   }
 }
 
@@ -106,5 +113,26 @@ export function createJwtAuth(opts: CreateJwtAuthOpts) {
     };
   }
 
-  return { express };
+  function fastify(): FastifyPluginAsync {
+    return async (instance) => {
+      instance.addHook('onRequest', async (request: FastifyRequest, reply: FastifyReply) => {
+        const token = bearerToken(request.headers.authorization);
+        if (!token) {
+          reply.code(401).send(unauthorizedBody('missing bearer token'));
+          return;
+        }
+
+        const traceId = (request.headers['x-trace-id'] as string | undefined) ?? randomUUID();
+        await runWithTraceId(traceId, async () => {
+          try {
+            request.user = await verify(token);
+          } catch {
+            reply.code(401).send(unauthorizedBody('invalid token'));
+          }
+        });
+      });
+    };
+  }
+
+  return { express, fastify };
 }
