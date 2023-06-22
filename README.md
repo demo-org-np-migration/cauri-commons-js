@@ -115,11 +115,12 @@ await serviceToken.getToken(); // cachea hasta que expira, después pide uno nue
 import { metrics } from '@cauri/commons';
 
 const { handler, registry } = metrics();
-app.get('/metrics', handler());
+app.use(handler()); // antes de tus rutas
 ```
 
-Expone las métricas default de proceso de `prom-client` más un histograma
-`http_request_duration_seconds` con labels `method`, `route`, `status_code`.
+`handler()` mide cada request en `http_request_duration_seconds` (labels `method`, `route`,
+`status_code`) y responde `GET /metrics` con las métricas default de proceso de
+`prom-client` más ese histograma, en formato Prometheus.
 
 ## Desarrollo local
 
