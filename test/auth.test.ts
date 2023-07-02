@@ -100,3 +100,56 @@ describe('createJwtAuth().express()', () => {
     expect(res.statusCode).toBe(401);
   });
 });
+
+describe('createJwtAuth().fastify()', () => {
+  function fakeFastifyRequestReply(headers: Record<string, string> = {}) {
+    const request: any = { headers };
+    const reply: any = {
+      statusCode: 0,
+      body: undefined,
+      code(status: number) {
+        this.statusCode = status;
+        return this;
+      },
+      send(body: unknown) {
+        this.body = body;
+        return this;
+      },
+    };
+    return { request, reply };
+  }
+
+  async function registerAndRunHook(plugin: ReturnType<typeof createJwtAuth>['fastify'], request: any, reply: any) {
+    let onRequestHook: ((req: any, rep: any) => Promise<void>) | undefined;
+    const instance: any = {
+      addHook(name: string, fn: (req: any, rep: any) => Promise<void>) {
+        if (name === 'onRequest') onRequestHook = fn;
+      },
+    };
+    await plugin()(instance, {}, () => undefined);
+    await onRequestHook!(request, reply);
+  }
+
+  it('returns 401 when there is no bearer token', async () => {
+    const auth = createJwtAuth({ issuer: ISSUER });
+    const { request, reply } = fakeFastifyRequestReply();
+
+    await registerAndRunHook(auth.fastify, request, reply);
+
+    expect(reply.statusCode).toBe(401);
+    expect(request.user).toBeUndefined();
+  });
+
+  it('sets request.user from a valid token', async () => {
+    const auth = createJwtAuth({ issuer: ISSUER });
+    const { request, reply } = fakeFastifyRequestReply({ authorization: `Bearer ${validToken}` });
+
+    await registerAndRunHook(auth.fastify, request, reply);
+
+    expect(request.user).toEqual({
+      sub: 'aaaaaaaa-0000-4000-8000-000000000001',
+      roles: ['customer'],
+      merchant_id: undefined,
+    });
+  });
+});
