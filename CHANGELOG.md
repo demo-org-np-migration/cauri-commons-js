@@ -1,5 +1,13 @@
 # Changelog
 
+## v1.1.0
+
+- `createJwtAuth(opts).fastify()`: mismo chequeo que `express()`, para servicios en
+  Fastify. Deja `request.user`.
+- `metrics()`: métricas default de proceso (`prom-client`) + histograma
+  `http_request_duration_seconds`. `handler()` se monta con `app.use()` y responde
+  `GET /metrics` en formato Prometheus.
+
 ## v1.0.0
 
 - `logger(service, env)`: JSON a stdout con `service`/`env`, correlación de `trace_id`.
