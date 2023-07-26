@@ -78,5 +78,25 @@ function createJwtAuth(opts) {
             });
         };
     }
-    return { express };
+    function fastify() {
+        return async (instance) => {
+            instance.addHook('onRequest', async (request, reply) => {
+                const token = bearerToken(request.headers.authorization);
+                if (!token) {
+                    reply.code(401).send(unauthorizedBody('missing bearer token'));
+                    return;
+                }
+                const traceId = request.headers['x-trace-id'] ?? (0, node_crypto_1.randomUUID)();
+                await (0, logger_1.runWithTraceId)(traceId, async () => {
+                    try {
+                        request.user = await verify(token);
+                    }
+                    catch {
+                        reply.code(401).send(unauthorizedBody('invalid token'));
+                    }
+                });
+            });
+        };
+    }
+    return { express, fastify };
 }

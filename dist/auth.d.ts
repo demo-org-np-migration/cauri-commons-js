@@ -1,4 +1,5 @@
 import type { RequestHandler } from 'express';
+import type { FastifyPluginAsync } from 'fastify';
 export interface AuthUser {
     sub: string;
     roles: string[];
@@ -9,6 +10,11 @@ declare global {
         interface Request {
             user?: AuthUser;
         }
+    }
+}
+declare module 'fastify' {
+    interface FastifyRequest {
+        user?: AuthUser;
     }
 }
 export interface CreateJwtAuthOpts {
@@ -23,4 +29,5 @@ export interface CreateJwtAuthOpts {
  */
 export declare function createJwtAuth(opts: CreateJwtAuthOpts): {
     express: () => RequestHandler;
+    fastify: () => FastifyPluginAsync;
 };

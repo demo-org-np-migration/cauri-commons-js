@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.createJwtAuth = exports.HttpError = exports.httpClient = exports.getTraceId = exports.runWithTraceId = exports.logger = void 0;
+exports.metrics = exports.createJwtAuth = exports.HttpError = exports.httpClient = exports.getTraceId = exports.runWithTraceId = exports.logger = void 0;
 var logger_1 = require("./logger");
 Object.defineProperty(exports, "logger", { enumerable: true, get: function () { return logger_1.logger; } });
 Object.defineProperty(exports, "runWithTraceId", { enumerable: true, get: function () { return logger_1.runWithTraceId; } });
@@ -10,3 +10,5 @@ Object.defineProperty(exports, "httpClient", { enumerable: true, get: function (
 Object.defineProperty(exports, "HttpError", { enumerable: true, get: function () { return httpClient_1.HttpError; } });
 var auth_1 = require("./auth");
 Object.defineProperty(exports, "createJwtAuth", { enumerable: true, get: function () { return auth_1.createJwtAuth; } });
+var metrics_1 = require("./metrics");
+Object.defineProperty(exports, "metrics", { enumerable: true, get: function () { return metrics_1.metrics; } });
