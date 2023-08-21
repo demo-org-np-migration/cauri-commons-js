@@ -4,3 +4,5 @@ export type { HttpClientOpts, RequestInitLike } from './httpClient';
 export { createJwtAuth } from './auth';
 export type { AuthUser, CreateJwtAuthOpts } from './auth';
 export { metrics } from './metrics';
+export { serviceTokenProvider } from './serviceToken';
+export type { ServiceTokenProviderOpts } from './serviceToken';
