@@ -153,3 +153,41 @@ describe('createJwtAuth().fastify()', () => {
     });
   });
 });
+
+describe('createJwtAuth().requireRole()', () => {
+  it('calls next() when the user has the role', () => {
+    const requireRole = createJwtAuth({ issuer: ISSUER }).requireRole('ops-admin');
+    const { req, res } = fakeReqRes();
+    req.user = { sub: 'carla', roles: ['ops', 'ops-admin'] };
+    const next = vi.fn();
+
+    requireRole(req, res, next);
+
+    expect(next).toHaveBeenCalledOnce();
+    expect(res.statusCode).toBe(0);
+  });
+
+  it('returns 403 when the user is missing the role', () => {
+    const requireRole = createJwtAuth({ issuer: ISSUER }).requireRole('ops-admin');
+    const { req, res } = fakeReqRes();
+    req.user = { sub: 'ana', roles: ['customer'] };
+    const next = vi.fn();
+
+    requireRole(req, res, next);
+
+    expect(next).not.toHaveBeenCalled();
+    expect(res.statusCode).toBe(403);
+    expect(res.body).toEqual({ error: { code: 'forbidden', message: 'missing role ops-admin' } });
+  });
+
+  it('returns 403 when there is no user at all', () => {
+    const requireRole = createJwtAuth({ issuer: ISSUER }).requireRole('ops-admin');
+    const { req, res } = fakeReqRes();
+    const next = vi.fn();
+
+    requireRole(req, res, next);
+
+    expect(next).not.toHaveBeenCalled();
+    expect(res.statusCode).toBe(403);
+  });
+});
