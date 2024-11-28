@@ -1,5 +1,14 @@
 # Changelog
 
+## v1.2.0
+
+- `serviceTokenProvider(opts)`: client-credentials contra Keycloak con cache hasta que el
+  token está por expirar (usar para las llamadas de servicio a servicio, ej.
+  `payments-api` → `ledger-core`).
+- `createJwtAuth(opts).requireRole(role)`: guard reusable para Express y Fastify. `403`
+  con `{"error":{"code":"forbidden", ...}}` si al usuario le falta el rol.
+- Migrar desde 1.1 no rompe nada: `express()`, `fastify()` y `metrics()` quedan igual.
+
 ## v1.1.0
 
 - `createJwtAuth(opts).fastify()`: mismo chequeo que `express()`, para servicios en
