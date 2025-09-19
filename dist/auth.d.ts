@@ -30,4 +30,5 @@ export interface CreateJwtAuthOpts {
 export declare function createJwtAuth(opts: CreateJwtAuthOpts): {
     express: () => RequestHandler;
     fastify: () => FastifyPluginAsync;
+    requireRole: (role: string) => RequestHandler;
 };

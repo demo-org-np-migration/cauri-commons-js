@@ -22,6 +22,31 @@ function bearerToken(header) {
 function unauthorizedBody(message) {
     return { error: { code: 'unauthorized', message } };
 }
+function forbiddenBody(role) {
+    return { error: { code: 'forbidden', message: `missing role ${role}` } };
+}
+/**
+ * Works as an Express `RequestHandler` (req, res, next) or a Fastify
+ * preHandler (request, reply). Both frameworks expose `.user` on the first
+ * argument (set by `express()`/`fastify()` above) and a way to send a JSON
+ * body with a status code on the second, so one implementation covers both.
+ */
+function requireRoleGuard(role) {
+    return (reqOrRequest, resOrReply, next) => {
+        const user = reqOrRequest.user;
+        if (user?.roles.includes(role)) {
+            next?.();
+            return;
+        }
+        const res = resOrReply;
+        const reply = resOrReply;
+        if (typeof res.status === 'function' && typeof res.json === 'function') {
+            res.status(403).json(forbiddenBody(role));
+            return;
+        }
+        reply.code(403).send(forbiddenBody(role));
+    };
+}
 /**
  * Validates JWTs issued by a Keycloak realm against its JWKS (las convenciones internas de API).
  * `express()`/`fastify()` set `req.user`/`request.user` to `{sub, roles, merchant_id?}`
@@ -98,5 +123,13 @@ function createJwtAuth(opts) {
             });
         };
     }
-    return { express, fastify };
+    /**
+     * Guards a route to a role, e.g. `app.post('/x', auth.requireRole('ops-admin'), handler)`
+     * (Express) or `{ preHandler: auth.requireRole('ops-admin') }` (Fastify).
+     * Must run after `express()`/`fastify()` so `.user` is already set.
+     */
+    function requireRole(role) {
+        return requireRoleGuard(role);
+    }
+    return { express, fastify, requireRole };
 }
