@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import type { NextFunction, Request, RequestHandler, Response } from 'express';
 import type { FastifyPluginAsync, FastifyReply, FastifyRequest } from 'fastify';
+import fp from 'fastify-plugin';
 import { importJWK, jwtVerify, type JWK, type JWTPayload, type JWTVerifyGetKey } from 'jose';
 import { runWithTraceId } from './logger';
 
@@ -142,24 +143,33 @@ export function createJwtAuth(opts: CreateJwtAuthOpts) {
   }
 
   function fastify(): FastifyPluginAsync {
-    return async (instance) => {
-      instance.addHook('onRequest', async (request: FastifyRequest, reply: FastifyReply) => {
-        const token = bearerToken(request.headers.authorization);
-        if (!token) {
-          reply.code(401).send(unauthorizedBody('missing bearer token'));
-          return;
-        }
-
-        const traceId = (request.headers['x-trace-id'] as string | undefined) ?? randomUUID();
-        await runWithTraceId(traceId, async () => {
-          try {
-            request.user = await verify(token);
-          } catch {
-            reply.code(401).send(unauthorizedBody('invalid token'));
+    // Plain Fastify plugins are encapsulated: a hook added inside one only
+    // applies to routes declared in that SAME plugin, not to siblings
+    // registered next to it (the natural way to compose an app: one
+    // `register` for auth, another for routes). fastify-plugin breaks that
+    // encapsulation so this hook attaches to the parent context instead,
+    // which is what every consumer actually wants from an auth plugin.
+    return fp(
+      async (instance) => {
+        instance.addHook('onRequest', async (request: FastifyRequest, reply: FastifyReply) => {
+          const token = bearerToken(request.headers.authorization);
+          if (!token) {
+            reply.code(401).send(unauthorizedBody('missing bearer token'));
+            return;
           }
+
+          const traceId = (request.headers['x-trace-id'] as string | undefined) ?? randomUUID();
+          await runWithTraceId(traceId, async () => {
+            try {
+              request.user = await verify(token);
+            } catch {
+              reply.code(401).send(unauthorizedBody('invalid token'));
+            }
+          });
         });
-      });
-    };
+      },
+      { name: '@cauri/commons/auth' },
+    );
   }
 
   /**

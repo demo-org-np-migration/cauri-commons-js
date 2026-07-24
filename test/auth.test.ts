@@ -1,4 +1,5 @@
 import { beforeAll, describe, expect, it, vi } from 'vitest';
+import Fastify from 'fastify';
 import { SignJWT, exportJWK, generateKeyPair } from 'jose';
 import { createJwtAuth } from '../src/auth';
 
@@ -151,6 +152,39 @@ describe('createJwtAuth().fastify()', () => {
       roles: ['customer'],
       merchant_id: undefined,
     });
+  });
+});
+
+describe('createJwtAuth().fastify() on a real Fastify app', () => {
+  // Reproduces the bug reported from kyc-service: the natural usage pattern
+  // registers auth.fastify() and the route plugins as siblings under the
+  // same parent (e.g. two `await app.register(...)` calls, or one wrapping
+  // `register` with two children). Fastify encapsulates each `register`
+  // call in its own context, so a plain plugin's onRequest hook only runs
+  // for routes declared inside that SAME plugin unless it's wrapped with
+  // fastify-plugin. Without that wrapping this test fails: the sibling
+  // route is served with no auth at all.
+  it('applies the onRequest hook to a route registered as a sibling plugin', async () => {
+    const app = Fastify();
+    const auth = createJwtAuth({ issuer: ISSUER });
+
+    await app.register(auth.fastify());
+    await app.register(async (instance) => {
+      instance.get('/v1/protected', async () => ({ ok: true }));
+    });
+
+    const noToken = await app.inject({ method: 'GET', url: '/v1/protected' });
+    expect(noToken.statusCode).toBe(401);
+
+    const withToken = await app.inject({
+      method: 'GET',
+      url: '/v1/protected',
+      headers: { authorization: `Bearer ${validToken}` },
+    });
+    expect(withToken.statusCode).toBe(200);
+    expect(withToken.json()).toEqual({ ok: true });
+
+    await app.close();
   });
 });
 
