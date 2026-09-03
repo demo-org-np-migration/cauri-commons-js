@@ -1,6 +1,6 @@
 {
   "name": "@cauri/commons",
-  "version": "1.2.0",
+  "version": "1.2.1",
   "description": "Shared Node.js building blocks for Cauri services: logging, HTTP client, auth, metrics.",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",

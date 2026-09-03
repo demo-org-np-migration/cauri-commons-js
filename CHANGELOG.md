@@ -1,5 +1,13 @@
 # Changelog
 
+## v1.2.1
+
+- `fastify()`: el hook de auth se aplica al contexto padre (fastify-plugin). Sin esto,
+  registrar `auth.fastify()` y las rutas como plugins hermanos (el patrón más natural,
+  ej. `app.register(auth.fastify()); app.register(routes)`) dejaba las rutas sin auth: el
+  hook `onRequest` quedaba encapsulado dentro del plugin de auth y nunca corría para las
+  rutas hermanas. Reportado desde kyc-service.
+
 ## v1.2.0
 
 - `serviceTokenProvider(opts)`: client-credentials contra Keycloak con cache hasta que el

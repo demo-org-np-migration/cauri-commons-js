@@ -15,7 +15,7 @@ No está en un registry privado, se instala directo del repo:
 ```json
 {
   "dependencies": {
-    "@cauri/commons": "github:demo-org-np-migration/cauri-commons-js#v1.2.0"
+    "@cauri/commons": "github:demo-org-np-migration/cauri-commons-js#v1.2.1"
   }
 }
 ```
@@ -140,6 +140,7 @@ que alguien tocó `src/` y no corrió el build.
 | `v1.0.0` | `logger`, `httpClient`, `createJwtAuth().express()` |
 | `v1.1.0` | agrega `createJwtAuth().fastify()` y `metrics()` |
 | `v1.2.0` | agrega `serviceTokenProvider` y `createJwtAuth().requireRole()`; migrar desde 1.1 no rompe nada |
+| `v1.2.1` | fix: `fastify()` ya aplica el hook de auth aunque lo registres como plugin hermano de tus rutas |
 
 Dueño: equipo platform. Preguntas o breaking changes, hablar con Martín o Carla antes de
 mergear.

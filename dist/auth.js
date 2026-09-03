@@ -1,7 +1,11 @@
 "use strict";
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.createJwtAuth = createJwtAuth;
 const node_crypto_1 = require("node:crypto");
+const fastify_plugin_1 = __importDefault(require("fastify-plugin"));
 const jose_1 = require("jose");
 const logger_1 = require("./logger");
 const JWKS_CACHE_TTL_MS = 5 * 60 * 1000;
@@ -104,7 +108,13 @@ function createJwtAuth(opts) {
         };
     }
     function fastify() {
-        return async (instance) => {
+        // Plain Fastify plugins are encapsulated: a hook added inside one only
+        // applies to routes declared in that SAME plugin, not to siblings
+        // registered next to it (the natural way to compose an app: one
+        // `register` for auth, another for routes). fastify-plugin breaks that
+        // encapsulation so this hook attaches to the parent context instead,
+        // which is what every consumer actually wants from an auth plugin.
+        return (0, fastify_plugin_1.default)(async (instance) => {
             instance.addHook('onRequest', async (request, reply) => {
                 const token = bearerToken(request.headers.authorization);
                 if (!token) {
@@ -121,7 +131,7 @@ function createJwtAuth(opts) {
                     }
                 });
             });
-        };
+        }, { name: '@cauri/commons/auth' });
     }
     /**
      * Guards a route to a role, e.g. `app.post('/x', auth.requireRole('ops-admin'), handler)`
